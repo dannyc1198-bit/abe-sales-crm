@@ -1,0 +1,16 @@
+<!doctype html><meta charset=utf-8><title>CRM metrics (Danny)</title><style>body{font:14px Inter,system-ui;max-width:1000px;margin:24px auto;padding:0 12px}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:6px;text-align:left}.k{display:inline-block;margin:6px;padding:12px 16px;border:1px solid #ddd;border-radius:10px}.k b{font-size:22px;display:block}</style>
+<h1>Pipeline CRM: usage</h1><div id=login><input id=em placeholder="your email" value="dannyc1198@gmail.com"> <button id=go>Email me a sign-in link</button></div><div id=out></div>
+<script type=module>
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+const URL='SUPABASE_URL', KEY='SUPABASE_ANON_KEY'; // paste from Supabase > Project Settings > API
+const sb=createClient(URL,KEY);
+go.onclick=async()=>{await sb.auth.signInWithOtp({email:em.value,options:{emailRedirectTo:location.href}});alert('Check your email')};
+const {data:{session}}=await sb.auth.getSession();if(session){login.hidden=true;load()}
+async function load(){const since=new Date(Date.now()-30*864e5).toISOString();
+ const [{data:ev},{data:ld},{data:dv}]=await Promise.all([sb.from('events').select('*').gte('at',since).limit(10000),sb.from('leads').select('*'),sb.from('devices').select('*')]);
+ const c=k=>ev.filter(e=>e.kind===k).length,won=ld.filter(l=>/won/i.test(l.stage)),cost=ev.reduce((a,e)=>a+(+e.cost||0),0);
+ const st={};ld.forEach(l=>st[l.stage]=(st[l.stage]||0)+1);const days={};ev.forEach(e=>{const d=e.at.slice(0,10);days[d]=(days[d]||0)+1});
+ out.innerHTML=`<p>Last 30 days · devices: ${dv.map(d=>d.label+' (seen '+(d.last_seen||'').slice(0,16)+')').join(', ')}</p>`+
+ [['Sessions',c('session')],['Searches',c('search')],['Imports',c('import')],['Stage moves',c('move')],['Calls',c('call')],['Texts',c('text')],['Leads',ld.length],['Won',won.length],['Won $',won.reduce((a,l)=>a+(+l.value||0),0)],['Paid API $',cost.toFixed(2)]].map(([k,v])=>`<span class=k><b>${v}</b>${k}</span>`).join('')+
+ `<h3>Leads by stage</h3><table>${Object.entries(st).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table><h3>Activity per day</h3><table>${Object.entries(days).sort().reverse().map(([k,v])=>`<tr><td>${k}</td><td>${v} events</td></tr>`).join('')}</table>`}
+</script>
