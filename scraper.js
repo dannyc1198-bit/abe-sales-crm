@@ -17,7 +17,7 @@ const PROVIDERS=[
  {id:'llm',name:'AI scoring, summary and opening line',paid:true,key:'llm',step:'score',note:'One short call per lead.'}];
 const hasKey=p=>p.key==='llm'?!!(CFG.keys[CFG.llm]||SRV.keys?.[CFG.llm]):p.key?!!(CFG.keys[p.key]||SRV.keys?.[p.key]):true;
 let SRV={ok:false,keys:{}};
-async function health(){try{const r=await fetch(CFG.server+'/api/health');SRV=Object.assign({ok:true},await r.json())}catch(e){SRV={ok:false,keys:{}}}return SRV}
+async function health(){const local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)||location.port==='8787',srvLocal=/localhost|127\.0\.0\.1/.test(CFG.server);if(!local&&srvLocal){SRV={ok:false,keys:{}};return SRV}try{const r=await fetch(CFG.server+'/api/health');SRV=Object.assign({ok:true},await r.json())}catch(e){SRV={ok:false,keys:{}}}return SRV}
 async function api(path,body,job,keyName){const h={'Content-Type':'application/json','X-Run-Id':job.id};const k=CFG.keys[keyName];if(k)h['X-Api-Key']=k;
  const r=await fetch(CFG.server+path,{method:'POST',headers:h,body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d}
 function estimate(o){const n=+o.max||0,P=PRICES,L=P.llm[CFG.llm],lines=[];
